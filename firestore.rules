@@ -1,0 +1,381 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Global default-deny safety net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // --- GLOBAL HARDENED HELPERS ---
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isValidTimestamp(ts) {
+      return ts is timestamp && ts <= request.time;
+    }
+
+    function isValidRole(role) {
+      return role in ['ADMIN', 'MANAGER', 'CASHIER', 'WAREHOUSE'];
+    }
+
+    // --- VALIDATION BLUEPRINTS ---
+    function isValidDistributorSettings(data, userId) {
+      return data.userId is string && data.userId == userId &&
+             data.businessName is string && data.businessName.size() >= 1 && data.businessName.size() <= 120 &&
+             (!('address' in data) || (data.address is string && data.address.size() <= 250)) &&
+             (!('phone' in data) || (data.phone is string && data.phone.size() <= 40)) &&
+             (!('email' in data) || (data.email is string && data.email.size() <= 120)) &&
+             (!('tin' in data) || (data.tin is string && data.tin.size() <= 40)) &&
+             data.bralirwaEmail is string && data.bralirwaEmail.size() >= 3 && data.bralirwaEmail.size() <= 120 &&
+             data.vatRate is number && data.vatRate >= 0 && data.vatRate <= 100 &&
+             data.lowStockAutoEmail is bool &&
+             data.recurringBillingEnabled is bool &&
+             data.thermalPaperMm is int && (data.thermalPaperMm == 58 || data.thermalPaperMm == 80) &&
+             data.activeStaffRole is string && isValidRole(data.activeStaffRole) &&
+             data.activeStaffName is string && data.activeStaffName.size() >= 1 && data.activeStaffName.size() <= 80 &&
+             isValidTimestamp(data.createdAt) &&
+             isValidTimestamp(data.updatedAt);
+    }
+
+    function isValidProduct(data, userId) {
+      return data.userId is string && data.userId == userId &&
+             data.skuCode is string && data.skuCode.size() >= 1 && data.skuCode.size() <= 40 &&
+             data.name is string && data.name.size() >= 1 && data.name.size() <= 120 &&
+             data.category in ['BEER', 'SOFT_DRINK'] &&
+             data.subCategory is string && data.subCategory.size() >= 1 && data.subCategory.size() <= 60 &&
+             data.unitLabel is string && data.unitLabel.size() >= 1 && data.unitLabel.size() <= 40 &&
+             data.costPriceRwf is number && data.costPriceRwf >= 0 &&
+             data.sellingPriceRwf is number && data.sellingPriceRwf >= 0 &&
+             data.stockQty is int && data.stockQty >= 0 &&
+             data.reorderLevel is int && data.reorderLevel >= 0 &&
+             data.batchReceivedEpochMs is int && data.batchReceivedEpochMs >= 0 &&
+             (!('imageResKey' in data) || (data.imageResKey is string && data.imageResKey.size() <= 80)) &&
+             (!('imageUri' in data) || (data.imageUri is string && data.imageUri.size() <= 600)) &&
+             isValidTimestamp(data.createdAt) &&
+             isValidTimestamp(data.updatedAt);
+    }
+
+    function isValidCustomer(data, userId) {
+      return data.userId is string && data.userId == userId &&
+             data.name is string && data.name.size() >= 1 && data.name.size() <= 120 &&
+             (!('phone' in data) || (data.phone is string && data.phone.size() <= 40)) &&
+             (!('email' in data) || (data.email is string && data.email.size() <= 120)) &&
+             (!('tin' in data) || (data.tin is string && data.tin.size() <= 40)) &&
+             (!('zone' in data) || (data.zone is string && data.zone.size() <= 80)) &&
+             data.totalSpentRwf is number && data.totalSpentRwf >= 0 &&
+             data.creditBalanceRwf is number && data.creditBalanceRwf >= 0 &&
+             data.billingCycle in ['NONE', 'WEEKLY', 'MONTHLY'] &&
+             data.nextBillingEpochMs is int && data.nextBillingEpochMs >= 0 &&
+             isValidTimestamp(data.createdAt) &&
+             isValidTimestamp(data.updatedAt);
+    }
+
+    function isValidSalesOrder(data, userId) {
+      return data.userId is string && data.userId == userId &&
+             data.invoiceNumber is string && data.invoiceNumber.size() >= 1 && data.invoiceNumber.size() <= 40 &&
+             (!('customerId' in data) || (data.customerId is string && data.customerId.size() <= 128)) &&
+             data.customerName is string && data.customerName.size() >= 1 && data.customerName.size() <= 120 &&
+             data.staffName is string && data.staffName.size() >= 1 && data.staffName.size() <= 80 &&
+             data.staffRole is string && data.staffRole in ['ADMIN', 'MANAGER', 'CASHIER'] &&
+             data.items is list && data.items.size() >= 1 && data.items.size() <= 50 &&
+             data.items[0] is map &&
+             data.itemsSummary is string && data.itemsSummary.size() >= 1 && data.itemsSummary.size() <= 1500 &&
+             data.totalCrates is int && data.totalCrates >= 0 &&
+             data.subtotalRwf is number && data.subtotalRwf >= 0 &&
+             data.vatRwf is number && data.vatRwf >= 0 &&
+             data.totalRwf is number && data.totalRwf >= 0 &&
+             data.paidRwf is number && data.paidRwf >= 0 &&
+             data.balanceRwf is number && data.balanceRwf >= 0 &&
+             data.paymentMethod in ['CASH', 'MOMO', 'AIRTEL', 'BANK', 'CREDIT'] &&
+             data.status in ['PAID', 'PARTIAL', 'CREDIT', 'VOIDED'] &&
+             (!('vehiclePlate' in data) || (data.vehiclePlate is string && data.vehiclePlate.size() <= 30)) &&
+             isValidTimestamp(data.createdAt) &&
+             isValidTimestamp(data.updatedAt);
+    }
+
+    function isValidReplenishmentOrder(data, userId) {
+      return data.userId is string && data.userId == userId &&
+             data.poNumber is string && data.poNumber.size() >= 1 && data.poNumber.size() <= 40 &&
+             data.supplierName is string && data.supplierName.size() >= 1 && data.supplierName.size() <= 100 &&
+             data.supplierEmail is string && data.supplierEmail.size() >= 3 && data.supplierEmail.size() <= 120 &&
+             data.items is list && data.items.size() >= 1 && data.items.size() <= 50 &&
+             data.items[0] is map &&
+             data.itemsSummary is string && data.itemsSummary.size() >= 1 && data.itemsSummary.size() <= 1500 &&
+             data.totalCrates is int && data.totalCrates >= 0 &&
+             data.totalCostRwf is number && data.totalCostRwf >= 0 &&
+             data.status in ['DRAFT', 'EMAILED', 'IN_TRANSIT', 'DELIVERED', 'CANCELLED'] &&
+             data.triggeredByAlert is bool &&
+             isValidTimestamp(data.createdAt) &&
+             isValidTimestamp(data.updatedAt);
+    }
+
+    function isValidExpenseRecord(data, userId) {
+      return data.userId is string && data.userId == userId &&
+             data.category in ['FUEL_FLEET', 'WAREHOUSE_RENT', 'PAYROLL', 'CRATE_DEPOSIT', 'UTILITIES', 'OTHER'] &&
+             data.description is string && data.description.size() >= 1 && data.description.size() <= 250 &&
+             data.amountRwf is number && data.amountRwf > 0 &&
+             (!('vehiclePlate' in data) || (data.vehiclePlate is string && data.vehiclePlate.size() <= 30)) &&
+             isValidTimestamp(data.createdAt) &&
+             isValidTimestamp(data.updatedAt);
+    }
+
+    function isValidShipmentRecord(data, userId) {
+      return data.userId is string && data.userId == userId &&
+             data.vehiclePlate is string && data.vehiclePlate.size() >= 1 && data.vehiclePlate.size() <= 30 &&
+             data.driverName is string && data.driverName.size() >= 1 && data.driverName.size() <= 80 &&
+             data.routeZone is string && data.routeZone.size() >= 1 && data.routeZone.size() <= 100 &&
+             data.cratesLoaded is int && data.cratesLoaded >= 0 &&
+             data.revenueRwf is number && data.revenueRwf >= 0 &&
+             data.cogsRwf is number && data.cogsRwf >= 0 &&
+             data.fuelAndTripCostRwf is number && data.fuelAndTripCostRwf >= 0 &&
+             data.status in ['LOADING', 'ON_ROUTE', 'COMPLETED'] &&
+             isValidTimestamp(data.createdAt) &&
+             isValidTimestamp(data.updatedAt);
+    }
+
+    function isValidStaffProfile(data, userId) {
+      return data.userId is string && data.userId == userId &&
+             data.fullName is string && data.fullName.size() >= 1 && data.fullName.size() <= 80 &&
+             data.email is string && data.email.size() >= 3 && data.email.size() <= 120 &&
+             data.role is string && isValidRole(data.role) &&
+             data.pinHash is string && data.pinHash.size() >= 4 && data.pinHash.size() <= 128 &&
+             data.active is bool &&
+             isValidTimestamp(data.createdAt) &&
+             isValidTimestamp(data.updatedAt);
+    }
+
+    function isValidOtpResetRecord(data, userId) {
+      return data.userId is string && data.userId == userId &&
+             data.email is string && data.email.size() >= 3 && data.email.size() <= 120 &&
+             data.otpCode is string && data.otpCode.size() == 6 &&
+             data.expiresAtMillis is int && data.expiresAtMillis > 0 &&
+             data.used is bool &&
+             isValidTimestamp(data.createdAt) &&
+             isValidTimestamp(data.updatedAt);
+    }
+
+    function isValidActivityLog(data, userId) {
+      return data.userId is string && data.userId == userId &&
+             data.type in ['SALE', 'REPLENISHMENT', 'STOCK_ALERT', 'EXPENSE', 'SHIPMENT', 'EMAIL', 'SECURITY'] &&
+             data.title is string && data.title.size() >= 1 && data.title.size() <= 140 &&
+             (!('detail' in data) || (data.detail is string && data.detail.size() <= 400)) &&
+             data.amountRwf is number &&
+             data.actorRole is string && data.actorRole.size() >= 1 && data.actorRole.size() <= 30 &&
+             isValidTimestamp(data.createdAt) &&
+             isValidTimestamp(data.updatedAt);
+    }
+
+    // --- DISTRIBUTOR ROOT & SETTINGS ---
+    match /distributors/{userId} {
+      allow get: if isOwner(userId) && isValidId(userId);
+      allow list: if false;
+
+      allow create: if isOwner(userId) && isValidId(userId) &&
+                       incoming().keys().hasAll(['userId', 'businessName', 'bralirwaEmail', 'vatRate', 'lowStockAutoEmail', 'recurringBillingEnabled', 'thermalPaperMm', 'activeStaffRole', 'activeStaffName', 'createdAt', 'updatedAt']) &&
+                       incoming().keys().hasOnly(['userId', 'businessName', 'address', 'phone', 'email', 'tin', 'bralirwaEmail', 'vatRate', 'lowStockAutoEmail', 'recurringBillingEnabled', 'thermalPaperMm', 'activeStaffRole', 'activeStaffName', 'createdAt', 'updatedAt']) &&
+                       isValidDistributorSettings(incoming(), userId);
+
+      allow update: if isOwner(userId) && isValidId(userId) &&
+                       isValidDistributorSettings(incoming(), userId) &&
+                       incoming().userId == existing().userId &&
+                       incoming().createdAt == existing().createdAt &&
+                       incoming().diff(existing()).affectedKeys().hasOnly(['businessName', 'address', 'phone', 'email', 'tin', 'bralirwaEmail', 'vatRate', 'lowStockAutoEmail', 'recurringBillingEnabled', 'thermalPaperMm', 'activeStaffRole', 'activeStaffName', 'updatedAt']);
+
+      allow delete: if false;
+
+      // --- PRODUCTS (BEER & SOFT DRINK INVENTORY) ---
+      match /products/{productId} {
+        allow get: if isOwner(userId) && isValidId(productId);
+        allow list: if isOwner(userId);
+
+        allow create: if isOwner(userId) && isValidId(productId) &&
+                         incoming().keys().hasAll(['userId', 'skuCode', 'name', 'category', 'subCategory', 'unitLabel', 'costPriceRwf', 'sellingPriceRwf', 'stockQty', 'reorderLevel', 'batchReceivedEpochMs', 'createdAt', 'updatedAt']) &&
+                         incoming().keys().hasOnly(['userId', 'skuCode', 'name', 'category', 'subCategory', 'unitLabel', 'costPriceRwf', 'sellingPriceRwf', 'stockQty', 'reorderLevel', 'batchReceivedEpochMs', 'imageResKey', 'imageUri', 'createdAt', 'updatedAt']) &&
+                         isValidProduct(incoming(), userId);
+
+        allow update: if isOwner(userId) && isValidId(productId) &&
+                         isValidProduct(incoming(), userId) &&
+                         incoming().userId == existing().userId &&
+                         incoming().createdAt == existing().createdAt &&
+                         incoming().diff(existing()).affectedKeys().hasOnly(['skuCode', 'name', 'category', 'subCategory', 'unitLabel', 'costPriceRwf', 'sellingPriceRwf', 'stockQty', 'reorderLevel', 'batchReceivedEpochMs', 'imageResKey', 'imageUri', 'updatedAt']);
+
+        allow delete: if isOwner(userId) && isValidId(productId);
+      }
+
+      // --- CUSTOMERS ---
+      match /customers/{customerId} {
+        allow get: if isOwner(userId) && isValidId(customerId);
+        allow list: if isOwner(userId);
+
+        allow create: if isOwner(userId) && isValidId(customerId) &&
+                         incoming().keys().hasAll(['userId', 'name', 'totalSpentRwf', 'creditBalanceRwf', 'billingCycle', 'nextBillingEpochMs', 'createdAt', 'updatedAt']) &&
+                         incoming().keys().hasOnly(['userId', 'name', 'phone', 'email', 'tin', 'zone', 'totalSpentRwf', 'creditBalanceRwf', 'billingCycle', 'nextBillingEpochMs', 'createdAt', 'updatedAt']) &&
+                         isValidCustomer(incoming(), userId);
+
+        allow update: if isOwner(userId) && isValidId(customerId) &&
+                         isValidCustomer(incoming(), userId) &&
+                         incoming().userId == existing().userId &&
+                         incoming().createdAt == existing().createdAt &&
+                         incoming().diff(existing()).affectedKeys().hasOnly(['name', 'phone', 'email', 'tin', 'zone', 'totalSpentRwf', 'creditBalanceRwf', 'billingCycle', 'nextBillingEpochMs', 'updatedAt']);
+
+        allow delete: if isOwner(userId) && isValidId(customerId);
+      }
+
+      // --- POS SALES ORDERS ---
+      match /orders/{orderId} {
+        allow get: if isOwner(userId) && isValidId(orderId);
+        allow list: if isOwner(userId);
+
+        allow create: if isOwner(userId) && isValidId(orderId) &&
+                         incoming().keys().hasAll(['userId', 'invoiceNumber', 'customerName', 'staffName', 'staffRole', 'items', 'itemsSummary', 'totalCrates', 'subtotalRwf', 'vatRwf', 'totalRwf', 'paidRwf', 'balanceRwf', 'paymentMethod', 'status', 'createdAt', 'updatedAt']) &&
+                         incoming().keys().hasOnly(['userId', 'invoiceNumber', 'customerId', 'customerName', 'staffName', 'staffRole', 'items', 'itemsSummary', 'totalCrates', 'subtotalRwf', 'vatRwf', 'totalRwf', 'paidRwf', 'balanceRwf', 'paymentMethod', 'status', 'vehiclePlate', 'createdAt', 'updatedAt']) &&
+                         isValidSalesOrder(incoming(), userId);
+
+        allow update: if isOwner(userId) && isValidId(orderId) &&
+                         isValidSalesOrder(incoming(), userId) &&
+                         incoming().userId == existing().userId &&
+                         incoming().createdAt == existing().createdAt &&
+                         existing().status != 'VOIDED' &&
+                         (
+                           // Action 1: Settle partial/credit invoice balance
+                           (incoming().diff(existing()).affectedKeys().hasOnly(['paidRwf', 'balanceRwf', 'paymentMethod', 'status', 'updatedAt'])) ||
+                           // Action 2: Void order
+                           (incoming().status == 'VOIDED' && incoming().diff(existing()).affectedKeys().hasOnly(['status', 'updatedAt']))
+                         );
+
+        allow delete: if false;
+      }
+
+      // --- BRALIRWA REPLENISHMENT ORDERS ---
+      match /replenishments/{replenishmentId} {
+        allow get: if isOwner(userId) && isValidId(replenishmentId);
+        allow list: if isOwner(userId);
+
+        allow create: if isOwner(userId) && isValidId(replenishmentId) &&
+                         incoming().keys().hasAll(['userId', 'poNumber', 'supplierName', 'supplierEmail', 'items', 'itemsSummary', 'totalCrates', 'totalCostRwf', 'status', 'triggeredByAlert', 'createdAt', 'updatedAt']) &&
+                         incoming().keys().hasOnly(['userId', 'poNumber', 'supplierName', 'supplierEmail', 'items', 'itemsSummary', 'totalCrates', 'totalCostRwf', 'status', 'triggeredByAlert', 'createdAt', 'updatedAt']) &&
+                         isValidReplenishmentOrder(incoming(), userId);
+
+        allow update: if isOwner(userId) && isValidId(replenishmentId) &&
+                         isValidReplenishmentOrder(incoming(), userId) &&
+                         incoming().userId == existing().userId &&
+                         incoming().createdAt == existing().createdAt &&
+                         !(existing().status in ['DELIVERED', 'CANCELLED']) &&
+                         incoming().diff(existing()).affectedKeys().hasOnly(['status', 'supplierEmail', 'updatedAt']);
+
+        allow delete: if false;
+      }
+
+      // --- OPERATING EXPENSES ---
+      match /expenses/{expenseId} {
+        allow get: if isOwner(userId) && isValidId(expenseId);
+        allow list: if isOwner(userId);
+
+        allow create: if isOwner(userId) && isValidId(expenseId) &&
+                         incoming().keys().hasAll(['userId', 'category', 'description', 'amountRwf', 'createdAt', 'updatedAt']) &&
+                         incoming().keys().hasOnly(['userId', 'category', 'description', 'amountRwf', 'vehiclePlate', 'createdAt', 'updatedAt']) &&
+                         isValidExpenseRecord(incoming(), userId);
+
+        allow update: if isOwner(userId) && isValidId(expenseId) &&
+                         isValidExpenseRecord(incoming(), userId) &&
+                         incoming().userId == existing().userId &&
+                         incoming().createdAt == existing().createdAt &&
+                         incoming().diff(existing()).affectedKeys().hasOnly(['category', 'description', 'amountRwf', 'vehiclePlate', 'updatedAt']);
+
+        allow delete: if isOwner(userId) && isValidId(expenseId);
+      }
+
+      // --- SHIPMENTS / FLEET P&L ---
+      match /shipments/{shipmentId} {
+        allow get: if isOwner(userId) && isValidId(shipmentId);
+        allow list: if isOwner(userId);
+
+        allow create: if isOwner(userId) && isValidId(shipmentId) &&
+                         incoming().keys().hasAll(['userId', 'vehiclePlate', 'driverName', 'routeZone', 'cratesLoaded', 'revenueRwf', 'cogsRwf', 'fuelAndTripCostRwf', 'status', 'createdAt', 'updatedAt']) &&
+                         incoming().keys().hasOnly(['userId', 'vehiclePlate', 'driverName', 'routeZone', 'cratesLoaded', 'revenueRwf', 'cogsRwf', 'fuelAndTripCostRwf', 'status', 'createdAt', 'updatedAt']) &&
+                         isValidShipmentRecord(incoming(), userId);
+
+        allow update: if isOwner(userId) && isValidId(shipmentId) &&
+                         isValidShipmentRecord(incoming(), userId) &&
+                         incoming().userId == existing().userId &&
+                         incoming().createdAt == existing().createdAt &&
+                         existing().status != 'COMPLETED' &&
+                         incoming().diff(existing()).affectedKeys().hasOnly(['cratesLoaded', 'revenueRwf', 'cogsRwf', 'fuelAndTripCostRwf', 'status', 'updatedAt']);
+
+        allow delete: if isOwner(userId) && isValidId(shipmentId);
+      }
+
+      // --- STAFF PROFILES ---
+      match /staff/{staffId} {
+        allow get: if isOwner(userId) && isValidId(staffId);
+        allow list: if isOwner(userId);
+
+        allow create: if isOwner(userId) && isValidId(staffId) &&
+                         incoming().keys().hasAll(['userId', 'fullName', 'email', 'role', 'pinHash', 'active', 'createdAt', 'updatedAt']) &&
+                         incoming().keys().hasOnly(['userId', 'fullName', 'email', 'role', 'pinHash', 'active', 'createdAt', 'updatedAt']) &&
+                         isValidStaffProfile(incoming(), userId);
+
+        allow update: if isOwner(userId) && isValidId(staffId) &&
+                         isValidStaffProfile(incoming(), userId) &&
+                         incoming().userId == existing().userId &&
+                         incoming().createdAt == existing().createdAt &&
+                         incoming().diff(existing()).affectedKeys().hasOnly(['fullName', 'email', 'role', 'pinHash', 'active', 'updatedAt']);
+
+        allow delete: if isOwner(userId) && isValidId(staffId);
+      }
+
+      // --- 6-DIGIT OTP RESET REQUESTS ---
+      match /otp_requests/{otpId} {
+        allow get: if isOwner(userId) && isValidId(otpId);
+        allow list: if isOwner(userId);
+
+        allow create: if isOwner(userId) && isValidId(otpId) &&
+                         incoming().keys().hasAll(['userId', 'email', 'otpCode', 'expiresAtMillis', 'used', 'createdAt', 'updatedAt']) &&
+                         incoming().keys().hasOnly(['userId', 'email', 'otpCode', 'expiresAtMillis', 'used', 'createdAt', 'updatedAt']) &&
+                         incoming().used == false &&
+                         isValidOtpResetRecord(incoming(), userId);
+
+        allow update: if isOwner(userId) && isValidId(otpId) &&
+                         isValidOtpResetRecord(incoming(), userId) &&
+                         incoming().userId == existing().userId &&
+                         incoming().createdAt == existing().createdAt &&
+                         existing().used == false &&
+                         incoming().used == true &&
+                         incoming().diff(existing()).affectedKeys().hasOnly(['used', 'updatedAt']);
+
+        allow delete: if false;
+      }
+
+      // --- UNIFIED ACTIVITY TIMELINE (APPEND-ONLY) ---
+      match /activities/{activityId} {
+        allow get: if isOwner(userId) && isValidId(activityId);
+        allow list: if isOwner(userId);
+
+        allow create: if isOwner(userId) && isValidId(activityId) &&
+                         incoming().keys().hasAll(['userId', 'type', 'title', 'amountRwf', 'actorRole', 'createdAt', 'updatedAt']) &&
+                         incoming().keys().hasOnly(['userId', 'type', 'title', 'detail', 'amountRwf', 'actorRole', 'createdAt', 'updatedAt']) &&
+                         isValidActivityLog(incoming(), userId);
+
+        allow update, delete: if false;
+      }
+    }
+  }
+}

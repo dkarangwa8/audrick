@@ -1,0 +1,240 @@
+{
+  "entities": {
+    "DistributorSettings": {
+      "title": "DistributorSettings",
+      "description": "Distributor business profile, invoice branding, tax, and automation settings.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "description": "Authenticated owner UID" },
+        "businessName": { "type": "string" },
+        "address": { "type": "string" },
+        "phone": { "type": "string" },
+        "email": { "type": "string" },
+        "tin": { "type": "string" },
+        "bralirwaEmail": { "type": "string" },
+        "vatRate": { "type": "number" },
+        "lowStockAutoEmail": { "type": "boolean" },
+        "recurringBillingEnabled": { "type": "boolean" },
+        "thermalPaperMm": { "type": "integer" },
+        "activeStaffRole": { "type": "string", "enum": ["ADMIN", "MANAGER", "CASHIER", "WAREHOUSE"] },
+        "activeStaffName": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Server timestamp" },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Server timestamp" }
+      },
+      "required": ["userId", "businessName", "bralirwaEmail", "vatRate", "lowStockAutoEmail", "recurringBillingEnabled", "thermalPaperMm", "activeStaffRole", "activeStaffName", "createdAt", "updatedAt"]
+    },
+    "Product": {
+      "title": "Product",
+      "description": "Bralirwa beer or soft drink SKU with crate pricing, stock level, and aging timestamp.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "skuCode": { "type": "string" },
+        "name": { "type": "string" },
+        "category": { "type": "string", "enum": ["BEER", "SOFT_DRINK"] },
+        "subCategory": { "type": "string" },
+        "unitLabel": { "type": "string" },
+        "costPriceRwf": { "type": "number" },
+        "sellingPriceRwf": { "type": "number" },
+        "stockQty": { "type": "integer" },
+        "reorderLevel": { "type": "integer" },
+        "batchReceivedEpochMs": { "type": "integer" },
+        "imageResKey": { "type": "string" },
+        "imageUri": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "skuCode", "name", "category", "subCategory", "unitLabel", "costPriceRwf", "sellingPriceRwf", "stockQty", "reorderLevel", "batchReceivedEpochMs", "createdAt", "updatedAt"]
+    },
+    "Customer": {
+      "title": "Customer",
+      "description": "Wholesale/HORECA customer account with credit balance and recurring billing schedule.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "name": { "type": "string" },
+        "phone": { "type": "string" },
+        "email": { "type": "string" },
+        "tin": { "type": "string" },
+        "zone": { "type": "string" },
+        "totalSpentRwf": { "type": "number" },
+        "creditBalanceRwf": { "type": "number" },
+        "billingCycle": { "type": "string", "enum": ["NONE", "WEEKLY", "MONTHLY"] },
+        "nextBillingEpochMs": { "type": "integer" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "name", "totalSpentRwf", "creditBalanceRwf", "billingCycle", "nextBillingEpochMs", "createdAt", "updatedAt"]
+    },
+    "SalesOrder": {
+      "title": "SalesOrder",
+      "description": "POS order with line items, payment split, and invoice state.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "invoiceNumber": { "type": "string" },
+        "customerId": { "type": "string" },
+        "customerName": { "type": "string" },
+        "staffName": { "type": "string" },
+        "staffRole": { "type": "string", "enum": ["ADMIN", "MANAGER", "CASHIER", "WAREHOUSE"] },
+        "items": { "type": "array" },
+        "itemsSummary": { "type": "string" },
+        "totalCrates": { "type": "integer" },
+        "subtotalRwf": { "type": "number" },
+        "vatRwf": { "type": "number" },
+        "totalRwf": { "type": "number" },
+        "paidRwf": { "type": "number" },
+        "balanceRwf": { "type": "number" },
+        "paymentMethod": { "type": "string", "enum": ["CASH", "MOMO", "AIRTEL", "BANK", "CREDIT"] },
+        "status": { "type": "string", "enum": ["PAID", "PARTIAL", "CREDIT", "VOIDED"] },
+        "vehiclePlate": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "invoiceNumber", "customerName", "staffName", "staffRole", "items", "itemsSummary", "totalCrates", "subtotalRwf", "vatRwf", "totalRwf", "paidRwf", "balanceRwf", "paymentMethod", "status", "createdAt", "updatedAt"]
+    },
+    "ReplenishmentOrder": {
+      "title": "ReplenishmentOrder",
+      "description": "Automated or manual stock replenishment command sent to Bralirwa depot.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "poNumber": { "type": "string" },
+        "supplierName": { "type": "string" },
+        "supplierEmail": { "type": "string" },
+        "items": { "type": "array" },
+        "itemsSummary": { "type": "string" },
+        "totalCrates": { "type": "integer" },
+        "totalCostRwf": { "type": "number" },
+        "status": { "type": "string", "enum": ["DRAFT", "EMAILED", "IN_TRANSIT", "DELIVERED", "CANCELLED"] },
+        "triggeredByAlert": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "poNumber", "supplierName", "supplierEmail", "items", "itemsSummary", "totalCrates", "totalCostRwf", "status", "triggeredByAlert", "createdAt", "updatedAt"]
+    },
+    "ExpenseRecord": {
+      "title": "ExpenseRecord",
+      "description": "Operational distribution expense for P&L and dashboard breakdown.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "category": { "type": "string", "enum": ["FUEL_FLEET", "WAREHOUSE_RENT", "PAYROLL", "CRATE_DEPOSIT", "UTILITIES", "OTHER"] },
+        "description": { "type": "string" },
+        "amountRwf": { "type": "number" },
+        "vehiclePlate": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "category", "description", "amountRwf", "createdAt", "updatedAt"]
+    },
+    "ShipmentRecord": {
+      "title": "ShipmentRecord",
+      "description": "Delivery vehicle/route shipment record for Car/Shipment P&L.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "vehiclePlate": { "type": "string" },
+        "driverName": { "type": "string" },
+        "routeZone": { "type": "string" },
+        "cratesLoaded": { "type": "integer" },
+        "revenueRwf": { "type": "number" },
+        "cogsRwf": { "type": "number" },
+        "fuelAndTripCostRwf": { "type": "number" },
+        "status": { "type": "string", "enum": ["LOADING", "ON_ROUTE", "COMPLETED"] },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "vehiclePlate", "driverName", "routeZone", "cratesLoaded", "revenueRwf", "cogsRwf", "fuelAndTripCostRwf", "status", "createdAt", "updatedAt"]
+    },
+    "StaffProfile": {
+      "title": "StaffProfile",
+      "description": "Role-aware staff member credential for shift switching and role enforcement.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "fullName": { "type": "string" },
+        "email": { "type": "string" },
+        "role": { "type": "string", "enum": ["ADMIN", "MANAGER", "CASHIER", "WAREHOUSE"] },
+        "pinHash": { "type": "string" },
+        "active": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "fullName", "email", "role", "pinHash", "active", "createdAt", "updatedAt"]
+    },
+    "OtpResetRecord": {
+      "title": "OtpResetRecord",
+      "description": "6-digit OTP reset record with 10-minute expiry for staff PIN recovery.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "email": { "type": "string" },
+        "otpCode": { "type": "string" },
+        "expiresAtMillis": { "type": "integer" },
+        "used": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "email", "otpCode", "expiresAtMillis", "used", "createdAt", "updatedAt"]
+    },
+    "ActivityLog": {
+      "title": "ActivityLog",
+      "description": "Unified timeline command & alert event log.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "type": { "type": "string", "enum": ["SALE", "REPLENISHMENT", "STOCK_ALERT", "EXPENSE", "SHIPMENT", "EMAIL", "SECURITY"] },
+        "title": { "type": "string" },
+        "detail": { "type": "string" },
+        "amountRwf": { "type": "number" },
+        "actorRole": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "type", "title", "amountRwf", "actorRole", "createdAt", "updatedAt"]
+    }
+  },
+  "firestore": {
+    "/distributors/{userId}": {
+      "schema": { "$ref": "#/entities/DistributorSettings" },
+      "description": "Owner distributor profile and operational settings."
+    },
+    "/distributors/{userId}/products/{productId}": {
+      "schema": { "$ref": "#/entities/Product" },
+      "description": "Bralirwa beer and soft drink inventory SKUs."
+    },
+    "/distributors/{userId}/customers/{customerId}": {
+      "schema": { "$ref": "#/entities/Customer" },
+      "description": "Wholesale and HORECA customers."
+    },
+    "/distributors/{userId}/orders/{orderId}": {
+      "schema": { "$ref": "#/entities/SalesOrder" },
+      "description": "POS customer sales orders and invoices."
+    },
+    "/distributors/{userId}/replenishments/{replenishmentId}": {
+      "schema": { "$ref": "#/entities/ReplenishmentOrder" },
+      "description": "Bralirwa stock replenishment purchase commands."
+    },
+    "/distributors/{userId}/expenses/{expenseId}": {
+      "schema": { "$ref": "#/entities/ExpenseRecord" },
+      "description": "Distribution operating expenses."
+    },
+    "/distributors/{userId}/shipments/{shipmentId}": {
+      "schema": { "$ref": "#/entities/ShipmentRecord" },
+      "description": "Fleet vehicle and shipment P&L tracking."
+    },
+    "/distributors/{userId}/staff/{staffId}": {
+      "schema": { "$ref": "#/entities/StaffProfile" },
+      "description": "Distributor staff profiles and role assignments."
+    },
+    "/distributors/{userId}/otp_requests/{otpId}": {
+      "schema": { "$ref": "#/entities/OtpResetRecord" },
+      "description": "6-digit OTP reset records with 10-minute expiration."
+    },
+    "/distributors/{userId}/activities/{activityId}": {
+      "schema": { "$ref": "#/entities/ActivityLog" },
+      "description": "Unified operational timeline."
+    }
+  }
+}

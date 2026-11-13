@@ -1,0 +1,6 @@
+{
+  "name": "Bralirwa POS",
+  "description": "Bralirwa beer and soft drink distributor POS system with real-time inventory tracking, automated replenishment orders, SWR local-first caching, analytics reports, and branded A4/thermal invoicing.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
